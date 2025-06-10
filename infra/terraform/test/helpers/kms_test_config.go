@@ -2,8 +2,8 @@ package helpers
 
 import (
 	"fmt"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
@@ -21,7 +21,7 @@ type KMSTestConfig struct {
 
 // NewKMSTestConfig 새로운 KMS 테스트 설정 생성
 func NewKMSTestConfig() *KMSTestConfig {
-	uniqueID := random.UniqueId()
+	uniqueID := strings.ToLower(random.UniqueId())
 	projectName := "k8s-ec2-observability"
 
 	return &KMSTestConfig{
@@ -53,22 +53,10 @@ func SetupKMSTest(t *testing.T, config *KMSTestConfig) *terraform.Options {
 			"replica_region":       "us-west-2",
 			"enable_backup":        false,
 			"enable_auto_recovery": false,
-			"enable_monitoring":    false,
-			"enable_cloudtrail":    false,
+			"enable_monitoring":    true,
+			"enable_cloudtrail":    true,
 			"tags":                 config.Tags,
 		},
-		EnvVars: map[string]string{
-			"AWS_DEFAULT_REGION": config.Region,
-		},
-		NoColor:            true,
-		Reconfigure:        true,
-		MaxRetries:         3,
-		TimeBetweenRetries: 5 * time.Second,
-	})
-
-	// 테스트 종료 시 리소스 정리
-	t.Cleanup(func() {
-		terraform.Destroy(t, terraformOptions)
 	})
 
 	return terraformOptions
