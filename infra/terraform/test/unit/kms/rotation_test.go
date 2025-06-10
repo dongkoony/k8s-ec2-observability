@@ -17,14 +17,15 @@ func TestKMSKeyRotation(t *testing.T) {
 	awsClient := helpers.NewAWSTestClient(t, config.Region)
 	terraformOptions := helpers.SetupKMSTest(t, config)
 
+	// 테스트 완료 후 리소스 정리
+	defer terraform.Destroy(t, terraformOptions)
+
 	// KMS 키 생성
 	terraform.InitAndApply(t, terraformOptions)
 
-	// KMS 키 유효성 검증
+	// KMS 키 로테이션 검증
 	keyID, _ := helpers.ValidateKMSKeyOutput(t, awsClient, terraformOptions)
-
-	// 키 로테이션 상태 확인
 	rotationStatus, err := awsClient.GetKeyRotationStatus(keyID)
 	assert.NoError(t, err)
-	assert.True(t, *rotationStatus.KeyRotationEnabled, "키 로테이션이 활성화되어 있어야 합니다")
+	assert.True(t, *rotationStatus.KeyRotationEnabled, "KMS 키 로테이션이 활성화되어야 합니다")
 }
