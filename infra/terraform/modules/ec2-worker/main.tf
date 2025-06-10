@@ -10,13 +10,14 @@ resource "aws_instance" "worker" {
   root_block_device {
     volume_size = var.root_volume_size
     volume_type = "gp3"
+    encrypted   = var.kms_key_id != "" ? true : false
+    kms_key_id  = var.kms_key_id != "" ? var.kms_key_id : null
   }
 
-  user_data = templatefile("${path.module}/templates/user_data.tpl", {
-    node_type = "worker"
-    node_index = count.index + 1
-    master_ip = var.master_private_ip
-  })
+  user_data = base64encode(templatefile("${path.module}/templates/worker_user_data.sh", {
+    master_private_ip = var.master_private_ip
+    node_index        = count.index + 1
+  }))
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-worker-${count.index + 1}"
