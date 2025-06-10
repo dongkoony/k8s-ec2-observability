@@ -23,4 +23,10 @@ variable "tags" {
   description = "리소스에 적용할 태그"
   type        = map(string)
   default     = {}
+}
+
+variable "kms_key_arn" {
+  description = "KMS 키 ARN (EC2 인스턴스 암호화용)"
+  type        = string
+  default     = ""
 } 
