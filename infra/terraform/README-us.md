@@ -11,22 +11,22 @@
 ## IAM Configuration Diagram
 ```mermaid
 graph TD
-    A[AWS Root Account] -->|1. Create IAM User| B[terraform-developer]
-    A -->|2. Create IAM Role| C[Terraform-Execution-Role]
+    A[AWS Root Account] -->|Create IAM User| B[terraform-developer]
+    A -->|Create IAM Role| C[Terraform-Execution-Role]
     
     subgraph "User Permission Setup"
-        B -->|3. Add Inline Policy| D[TerraformDeveloper-AssumeRolePolicy]
+        B -->|Add Inline Policy| D[TerraformDeveloper-AssumeRolePolicy]
         D -->|Permissions| E["sts:AssumeRole</br>iam:GetRole"]
     end
     
     subgraph "Role Permission Setup"
-        C -->|4. Attach Managed Policy| F[AmazonDynamoDBFullAccess_v2]
+        C -->|Attach Managed Policy| F[AmazonDynamoDBFullAccess_v2]
         C -->|Trust Relationship| G["Principal Config</br>(Root + terraform-developer)"]
     end
     
     subgraph "Credential Usage"
-        B -->|5. AssumeRole| C
-        C -->|6. Issue Temporary Credentials| H[Execute Terraform Tasks]
+        B -->|AssumeRole| C
+        C -->|Issue Temporary Credentials| H[Execute Terraform Tasks]
     end
 
     style A fill:#f9f,stroke:#333,stroke-width:2px

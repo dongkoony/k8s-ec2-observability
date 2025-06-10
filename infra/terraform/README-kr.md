@@ -11,22 +11,22 @@
 ## IAM 구성 다이어그램
 ```mermaid
 graph TD
-    A[AWS Root 계정] -->|1. IAM 사용자 생성| B[terraform-developer]
-    A -->|2. IAM Role 생성| C[Terraform-Execution-Role]
+    A[AWS Root 계정] -->|IAM 사용자 생성| B[terraform-developer]
+    A -->|IAM Role 생성| C[Terraform-Execution-Role]
     
     subgraph "사용자 권한 설정"
-        B -->|3. 인라인 정책 추가| D[TerraformDeveloper-AssumeRolePolicy]
+        B -->|인라인 정책 추가| D[TerraformDeveloper-AssumeRolePolicy]
         D -->|권한| E["sts:AssumeRole</br>iam:GetRole"]
     end
     
     subgraph "Role 권한 설정"
-        C -->|4. 관리형 정책 연결| F[AmazonDynamoDBFullAccess_v2]
+        C -->|관리형 정책 연결| F[AmazonDynamoDBFullAccess_v2]
         C -->|신뢰 관계 설정| G["Principal 설정</br>(Root + terraform-developer)"]
     end
     
     subgraph "자격 증명 사용"
-        B -->|5. AssumeRole| C
-        C -->|6. 임시 자격 증명 발급| H[Terraform 작업 수행]
+        B -->|AssumeRole| C
+        C -->|임시 자격 증명 발급| H[Terraform 작업 수행]
     end
 
     style A fill:#f9f,stroke:#333,stroke-width:2px
