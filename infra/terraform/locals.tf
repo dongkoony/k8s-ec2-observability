@@ -1,9 +1,10 @@
 locals {
-  common_tags = {
+  common_tags = merge(var.default_tags, {
+    Name        = var.project_name
     Environment = var.environment
     Project     = var.project_name
     Terraform   = "true"
-  }
+  })
 
   k8s_sg_ingress = [
     { from_port=22,   to_port=22,   protocol="tcp", cidr_blocks=["0.0.0.0/0"], description="SSH" },

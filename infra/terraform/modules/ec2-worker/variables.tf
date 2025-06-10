@@ -54,4 +54,10 @@ variable "root_volume_size" {
   description = "루트 볼륨 크기(GB)"
   type        = number
   default     = 30
+}
+
+variable "kms_key_id" {
+  description = "EBS 볼륨 암호화용 KMS 키 ID"
+  type        = string
+  default     = ""
 } 

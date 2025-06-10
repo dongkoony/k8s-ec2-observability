@@ -55,19 +55,14 @@ variable "tags" {
   default     = {}
 }
 
-variable "account_id" {
-  description = "AWS Account ID"
-  type        = string
-  
-  validation {
-    condition     = can(regex("^\\d{12}$", var.account_id))
-    error_message = "AWS account ID must be 12 digits."
-  }
-}
-
 variable "aws_account_id" {
   description = "AWS 계정 ID"
   type        = string
+  
+  validation {
+    condition     = can(regex("^\\d{12}$", var.aws_account_id))
+    error_message = "AWS account ID는 12자리 숫자여야 합니다."
+  }
 }
 
 variable "terraform_user_arn" {
@@ -87,17 +82,47 @@ variable "default_tags" {
   default     = {}
 }
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"] # Canonical
+# KMS 관련 변수들
+variable "enable_kms_key_rotation" {
+  description = "KMS 키 자동 로테이션 활성화 여부"
+  type        = bool
+  default     = true
+}
 
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
-  }
+variable "enable_kms_multi_region" {
+  description = "KMS 멀티 리전 복제 활성화 여부"
+  type        = bool
+  default     = false
+}
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-} 
+variable "enable_kms_backup" {
+  description = "KMS 백업 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "enable_kms_auto_recovery" {
+  description = "KMS 자동 복구 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "enable_kms_monitoring" {
+  description = "KMS 모니터링 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "enable_kms_cloudtrail" {
+  description = "KMS CloudTrail 로깅 활성화 여부"
+  type        = bool
+  default     = true
+}
+
+variable "kms_replica_region" {
+  description = "KMS 키 복제 대상 리전"
+  type        = string
+  default     = "us-west-2"
+}
+
+ 

@@ -31,4 +31,20 @@ output "private_subnet_id" {
 output "security_group_id" {
   description = "생성된 보안 그룹 ID"
   value       = module.security.security_group_id
+}
+
+# KMS 관련 출력값들
+output "kms_key_id" {
+  description = "생성된 KMS 키 ID"
+  value       = module.kms.key_id
+}
+
+output "kms_key_arn" {
+  description = "생성된 KMS 키 ARN"
+  value       = module.kms.key_arn
+}
+
+output "kms_alias_name" {
+  description = "생성된 KMS 키 별칭"
+  value       = module.kms.alias_name
 } 
