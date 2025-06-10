@@ -31,38 +31,17 @@ data "aws_caller_identity" "current" {}
 resource "aws_cloudwatch_log_group" "kms_logs" {
   count = var.enable_cloudtrail ? 1 : 0
 
-  name              = "/aws/kms/${var.project_name}-${var.environment}"
+  name              = "/aws/kms/${var.project_name}-${var.environment}-${var.unique_id}"
   retention_in_days = var.log_retention_days
   tags              = local.tags
 }
 
-# CloudTrail 트레일 생성 (CloudTrail 활성화시에만)
-resource "aws_cloudtrail" "kms_trail" {
-  count = var.enable_cloudtrail ? 1 : 0
-
-  name                          = "${var.project_name}-${var.environment}-kms-trail"
-  s3_bucket_name               = aws_s3_bucket.kms_logs[0].id
-  include_global_service_events = true
-  is_multi_region_trail        = true
-  enable_logging               = true
-  
-  event_selector {
-    read_write_type           = "All"
-    include_management_events = true
-  }
-
-  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.kms_logs[0].arn}:*"
-  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cloudwatch_role[0].arn
-
-  tags = local.tags
-}
-
-# CloudTrail 로그를 저장할 S3 버킷 (CloudTrail 활성화시에만)
+# CloudTrail 로그를 저장할 S3 버킷 생성
 resource "aws_s3_bucket" "kms_logs" {
   count = var.enable_cloudtrail ? 1 : 0
 
-  bucket        = "${var.project_name}-${var.environment}-kms-logs-${data.aws_caller_identity.current.account_id}"
-  force_destroy = var.environment != "prod"
+  bucket        = "${var.project_name}-${var.environment}-${var.unique_id}-kms-logs"
+  force_destroy = true
 
   tags = local.tags
 }
@@ -75,6 +54,18 @@ resource "aws_s3_bucket_versioning" "kms_logs" {
   versioning_configuration {
     status = "Enabled"
   }
+}
+
+# S3 버킷 퍼블릭 액세스 차단
+resource "aws_s3_bucket_public_access_block" "kms_logs" {
+  count = var.enable_cloudtrail ? 1 : 0
+
+  bucket = aws_s3_bucket.kms_logs[0].id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 # S3 버킷 서버 측 암호화 설정
@@ -94,7 +85,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "kms_logs" {
 resource "aws_iam_role" "cloudtrail_cloudwatch_role" {
   count = var.enable_cloudtrail ? 1 : 0
 
-  name = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch-role"
+  name = "${var.project_name}-${var.environment}-${var.unique_id}-cloudtrail-cloudwatch-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -116,7 +107,7 @@ resource "aws_iam_role" "cloudtrail_cloudwatch_role" {
 resource "aws_iam_role_policy" "cloudtrail_cloudwatch_policy" {
   count = var.enable_cloudtrail ? 1 : 0
 
-  name = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch-policy"
+  name = "${var.project_name}-${var.environment}-${var.unique_id}-cloudtrail-cloudwatch-policy"
   role = aws_iam_role.cloudtrail_cloudwatch_role[0].id
 
   policy = jsonencode({
@@ -151,6 +142,11 @@ resource "aws_s3_bucket_policy" "kms_logs" {
         }
         Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.kms_logs[0].arn
+        Condition = {
+          StringEquals = {
+            "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
       },
       {
         Sid    = "AWSCloudTrailWrite"
@@ -162,12 +158,74 @@ resource "aws_s3_bucket_policy" "kms_logs" {
         Resource = "${aws_s3_bucket.kms_logs[0].arn}/*"
         Condition = {
           StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
+            "s3:x-amz-acl"      = "bucket-owner-full-control"
+            "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid    = "AWSCloudTrailCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:GetBucketLocation"
+        Resource = aws_s3_bucket.kms_logs[0].arn
+        Condition = {
+          StringEquals = {
+            "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid    = "DenyInsecureConnections"
+        Effect = "Deny"
+        Principal = "*"
+        Action = "s3:*"
+        Resource = [
+          aws_s3_bucket.kms_logs[0].arn,
+          "${aws_s3_bucket.kms_logs[0].arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
           }
         }
       }
     ]
   })
+
+  depends_on = [
+    aws_s3_bucket_public_access_block.kms_logs,
+    aws_s3_bucket_versioning.kms_logs,
+    aws_s3_bucket_server_side_encryption_configuration.kms_logs
+  ]
+}
+
+# CloudTrail 생성
+resource "aws_cloudtrail" "kms_trail" {
+  count = var.enable_cloudtrail ? 1 : 0
+
+  name                       = "${var.project_name}-${var.environment}-${var.unique_id}-kms-trail"
+  s3_bucket_name             = aws_s3_bucket.kms_logs[0].bucket
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.kms_logs[0].arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cloudwatch_role[0].arn
+
+  is_multi_region_trail         = true
+  include_global_service_events = true
+  enable_logging                = true
+
+  event_selector {
+    read_write_type                 = "All"
+    include_management_events       = true
+  }
+
+  tags = local.tags
+
+  depends_on = [
+    aws_s3_bucket_policy.kms_logs,
+    aws_iam_role_policy.cloudtrail_cloudwatch_policy
+  ]
 }
 
 # KMS 키 생성
@@ -244,7 +302,7 @@ resource "aws_kms_alias" "k8s_key_alias" {
 resource "aws_cloudwatch_metric_alarm" "kms_key_usage" {
   count = var.enable_monitoring ? 1 : 0
 
-  alarm_name          = "${var.project_name}-${var.environment}-kms-key-usage"
+  alarm_name          = "${var.project_name}-${var.environment}-${var.unique_id}-kms-key-usage"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "NumberOfRequestsSucceeded"
@@ -287,13 +345,11 @@ resource "aws_kms_alias" "replica_alias" {
   target_key_id = aws_kms_replica_key.replica[0].key_id
 }
 
-
-
 # AWS Backup 볼트
 resource "aws_backup_vault" "kms_backup" {
   count = var.enable_backup ? 1 : 0
 
-  name        = "${var.project_name}-${var.environment}-kms-backup"
+  name        = "${var.project_name}-${var.environment}-${var.unique_id}-kms-backup"
   kms_key_arn = aws_kms_key.k8s_key.arn
   tags        = local.tags
 }
@@ -302,7 +358,7 @@ resource "aws_backup_vault" "kms_backup" {
 resource "aws_backup_plan" "kms_backup" {
   count = var.enable_backup ? 1 : 0
 
-  name = "${var.project_name}-${var.environment}-kms-backup-plan"
+  name = "${var.project_name}-${var.environment}-${var.unique_id}-kms-backup-plan"
 
   rule {
     rule_name         = "daily_backup"
