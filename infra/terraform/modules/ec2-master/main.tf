@@ -9,11 +9,13 @@ resource "aws_instance" "master" {
   root_block_device {
     volume_size = var.root_volume_size
     volume_type = "gp3"
+    encrypted   = var.kms_key_id != "" ? true : false
+    kms_key_id  = var.kms_key_id != "" ? var.kms_key_id : null
   }
 
-  user_data = templatefile("${path.module}/templates/user_data.tpl", {
-    node_type = "master"
-  })
+  user_data = base64encode(templatefile("${path.module}/templates/master_user_data.sh", {
+    node_role = "master"
+  }))
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-master"
