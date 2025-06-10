@@ -12,6 +12,8 @@ import (
 func TestKMSKeyTags(t *testing.T) {
 	t.Parallel()
 
+	t.Logf("🏷️ KMS 키 태그 테스트 시작...")
+
 	// 테스트 설정 초기화
 	config := helpers.NewKMSTestConfig()
 	awsClient := helpers.NewAWSTestClient(t, config.Region)
@@ -21,6 +23,7 @@ func TestKMSKeyTags(t *testing.T) {
 	defer terraform.Destroy(t, terraformOptions)
 
 	// KMS 키 생성
+	t.Logf("🔐 KMS 키 생성 중...")
 	terraform.InitAndApply(t, terraformOptions)
 
 	// 태그 검증을 위한 예상 태그 정의
@@ -34,6 +37,7 @@ func TestKMSKeyTags(t *testing.T) {
 	}
 
 	// KMS 키 태그 검증
+	t.Logf("🔍 KMS 키 태그 검증 중...")
 	keyID, _ := helpers.ValidateKMSKeyOutput(t, awsClient, terraformOptions)
 	actualTags, err := awsClient.GetKMSKeyTags(keyID)
 	assert.NoError(t, err)
@@ -44,4 +48,6 @@ func TestKMSKeyTags(t *testing.T) {
 		assert.True(t, exists, "태그 '%s'가 존재해야 합니다", expectedKey)
 		assert.Equal(t, expectedValue, actualValue, "태그 '%s'의 값이 일치해야 합니다", expectedKey)
 	}
+
+	t.Logf("✅ KMS 키 태그 테스트 완료: %d개 태그 검증됨", len(expectedTags))
 }

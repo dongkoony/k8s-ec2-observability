@@ -24,8 +24,9 @@ variable "vpc_id" {
 }
 
 variable "ssh_key_name" {
-  description = "EC2 접속용 SSH 키 이름"
+  description = "EC2 접속용 SSH 키 이름 (선택사항)"
   type        = string
+  default     = null
 }
 
 variable "tags" {
