@@ -17,6 +17,9 @@ func TestKMSKeyCreation(t *testing.T) {
 	awsClient := helpers.NewAWSTestClient(t, config.Region)
 	terraformOptions := helpers.SetupKMSTest(t, config)
 
+	// 테스트 완료 후 리소스 정리
+	defer terraform.Destroy(t, terraformOptions)
+
 	// KMS 키 생성
 	terraform.InitAndApply(t, terraformOptions)
 
