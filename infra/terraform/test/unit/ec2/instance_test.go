@@ -13,6 +13,8 @@ import (
 func TestEC2InstanceCreation(t *testing.T) {
 	t.Parallel()
 
+	t.Logf("🖥️ EC2 인스턴스 생성 테스트 시작...")
+
 	awsRegion := "ap-northeast-2"
 	projectName := "k8s-ec2-observability"
 	environment := "test"
@@ -45,12 +47,15 @@ func TestEC2InstanceCreation(t *testing.T) {
 	defer terraform.Destroy(t, terraformOptions)
 
 	// 리소스 생성
+	t.Logf("🚀 EC2 Master 노드 생성 중...")
 	terraform.InitAndApply(t, terraformOptions)
 
 	// 인스턴스 ID 가져오기
 	instanceID := terraform.Output(t, terraformOptions, "instance_id")
+	t.Logf("🔍 생성된 인스턴스 ID: %s", instanceID)
 
 	// 인스턴스 검증
+	t.Logf("🔍 EC2 인스턴스 상태 검증 중...")
 	instance, err := awsClient.ValidateEC2Instance(instanceID)
 	assert.NoError(t, err)
 	assert.NotNil(t, instance)
@@ -58,6 +63,7 @@ func TestEC2InstanceCreation(t *testing.T) {
 	assert.Equal(t, "running", *instance.State.Name)
 
 	// 태그 검증
+	t.Logf("🏷️ EC2 인스턴스 태그 검증 중...")
 	tags, err := awsClient.GetEC2InstanceTags(instanceID)
 	assert.NoError(t, err)
 	assert.Equal(t, projectName, tags["Project"])
@@ -66,11 +72,11 @@ func TestEC2InstanceCreation(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s-master", projectName), tags["Name"])
 
 	// 보안 그룹 검증
+	t.Logf("🛡️ 보안 그룹 검증 중...")
 	sgID := terraform.Output(t, terraformOptions, "security_group_id")
 	sg, err := awsClient.ValidateSecurityGroup(sgID)
 	assert.NoError(t, err)
 	assert.NotNil(t, sg)
 
-	// TODO: IAM 역할 검증 추가
-	// TODO: KMS 키 연동 검증 추가
+	t.Logf("✅ EC2 인스턴스 생성 테스트 완료: %s (%s)", instanceID, *instance.InstanceType)
 }
