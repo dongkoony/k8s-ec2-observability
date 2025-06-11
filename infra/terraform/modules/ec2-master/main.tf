@@ -1,3 +1,35 @@
+# KMS 키 상태 검증을 위한 데이터 소스 추가
+data "aws_kms_key" "validate_key" {
+  count  = var.kms_key_id != "" ? 1 : 0
+  key_id = var.kms_key_id
+}
+
+# KMS 키 준비 확인을 위한 null_resource
+resource "null_resource" "wait_for_kms" {
+  count = var.kms_key_id != "" ? 1 : 0
+  
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "🔍 KMS 키 상태 검증 중..."
+      for i in {1..30}; do
+        STATE=$(aws kms describe-key --key-id ${var.kms_key_id} --region ${var.aws_region} --query 'KeyMetadata.KeyState' --output text 2>/dev/null || echo "ERROR")
+        echo "시도 $i/30: KMS 키 상태 = $STATE"
+        if [ "$STATE" = "Enabled" ]; then
+          echo "✅ KMS 키가 EC2 사용 준비 완료"
+          sleep 10  # 추가 안정화 대기
+          exit 0
+        fi
+        echo "⏳ KMS 키 준비 중... (10초 후 재시도)"
+        sleep 10
+      done
+      echo "❌ KMS 키 준비 시간 초과"
+      exit 1
+    EOT
+  }
+
+  depends_on = [data.aws_kms_key.validate_key]
+}
+
 resource "aws_instance" "master" {
   ami           = var.ami_id
   instance_type = var.instance_type
@@ -21,6 +53,9 @@ resource "aws_instance" "master" {
     Name = "${var.project_name}-master"
     Role = "master"
   })
+
+  # KMS 키가 완전히 준비된 후에 인스턴스 생성
+  depends_on = [null_resource.wait_for_kms]
 }
 
 resource "aws_security_group" "master" {
