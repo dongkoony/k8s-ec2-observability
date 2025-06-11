@@ -45,4 +45,10 @@ variable "kms_key_id" {
   description = "EBS 볼륨 암호화용 KMS 키 ID"
   type        = string
   default     = ""
+}
+
+variable "aws_region" {
+  description = "AWS 리전"
+  type        = string
+  default     = "ap-northeast-2"
 } 
