@@ -40,7 +40,7 @@ resource "aws_cloudwatch_log_group" "kms_logs" {
 resource "aws_s3_bucket" "kms_logs" {
   count = var.enable_cloudtrail ? 1 : 0
 
-  bucket        = "${var.project_name}-${var.environment}-${var.unique_id}-kms-logs"
+  bucket        = replace("${var.project_name}-${var.environment}-${var.unique_id}-kms-logs", "_", "-")
   force_destroy = true
 
   tags = local.tags
@@ -294,7 +294,7 @@ resource "aws_kms_key" "k8s_key" {
 
 # KMS 키 별칭 생성
 resource "aws_kms_alias" "k8s_key_alias" {
-  name          = var.unique_id != "" ? "alias/${var.project_name}-${var.environment}-${var.unique_id}-key" : "alias/${var.project_name}-${var.environment}-key"
+  name          = var.unique_id != "" ? "alias/${var.project_name}-${var.environment}-${var.unique_id}-${formatdate("YYYYMMDDHHmmss", timestamp())}" : "alias/${var.project_name}-${var.environment}-key"
   target_key_id = aws_kms_key.k8s_key.key_id
 }
 
