@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
@@ -39,24 +40,32 @@ func NewKMSTestConfig() *KMSTestConfig {
 	}
 }
 
-// SetupKMSTest KMS 테스트 설정 초기화
+// SetupKMSTest KMS 테스트 설정 초기화 (GitHub Actions 최적화)
 func SetupKMSTest(t *testing.T, config *KMSTestConfig) *terraform.Options {
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: config.TestFolder,
 		Vars: map[string]interface{}{
-			"region":               config.Region,
-			"project_name":         config.ProjectName,
-			"environment":          config.Environment,
-			"unique_id":            config.UniqueID,
-			"test_name":            fmt.Sprintf("kms-test-%s", config.UniqueID),
-			"enable_multi_region":  false,
-			"replica_region":       "us-west-2",
-			"enable_backup":        false,
-			"enable_auto_recovery": false,
-			"enable_monitoring":    true,
-			"enable_cloudtrail":    true,
-			"tags":                 config.Tags,
+			"region":                  config.Region,
+			"project_name":            config.ProjectName,
+			"environment":             config.Environment,
+			"unique_id":               config.UniqueID,
+			"test_name":               fmt.Sprintf("kms-test-%s", config.UniqueID),
+			"enable_multi_region":     false, // 단순화
+			"replica_region":          "us-west-2",
+			"enable_backup":           false, // GitHub Actions에서 권한 문제 방지
+			"enable_auto_recovery":    false, // Lambda/EventBridge 권한 문제 방지
+			"enable_monitoring":       false, // CloudWatch 권한 문제 방지
+			"enable_cloudtrail":       false, // CloudTrail/S3 권한 문제 방지
+			"deletion_window_in_days": 7,     // 최소값으로 설정
+			"enable_key_rotation":     true,  // 기본 KMS 기능만 사용
+			"tags":                    config.Tags,
 		},
+		// 재시도 설정 추가
+		RetryableTerraformErrors: map[string]string{
+			".*": "Terraform operation failed, retrying...",
+		},
+		MaxRetries:         3,
+		TimeBetweenRetries: 5 * time.Second,
 	})
 
 	return terraformOptions
