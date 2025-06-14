@@ -31,7 +31,7 @@ module "master" {
   vpc_id         = module.vpc.vpc_id
   ssh_key_name   = var.key_name
   kms_key_id     = module.kms.key_id  # KMS 키 ID 전달
-  aws_region     = var.region         # AWS 리전 전달
+  aws_region     = var.region       
   tags           = local.common_tags
 }
 
@@ -48,7 +48,7 @@ module "worker" {
   master_private_ip        = module.master.private_ip
   master_security_group_id = module.master.security_group_id
   kms_key_id               = module.kms.key_id  # KMS 키 ID 전달
-  aws_region               = var.region         # AWS 리전 전달
+  aws_region               = var.region         
   tags                     = local.common_tags
 }
 
