@@ -16,14 +16,16 @@ provider "aws" {
 module "kms" {
   source = "../../modules/kms"
 
-  project_name         = var.project_name
-  environment          = var.environment
-  unique_id            = var.unique_id
-  enable_multi_region  = var.enable_multi_region
-  replica_region       = var.replica_region
-  enable_backup        = var.enable_backup
-  enable_auto_recovery = var.enable_auto_recovery
-  enable_monitoring    = var.enable_monitoring
-  enable_cloudtrail    = var.enable_cloudtrail
-  tags                 = var.tags
+  project_name            = var.project_name
+  environment             = var.environment
+  unique_id               = var.unique_id
+  enable_key_rotation     = var.enable_key_rotation
+  deletion_window_in_days = var.deletion_window_in_days
+  enable_multi_region     = var.enable_multi_region
+  replica_region          = var.replica_region
+  enable_backup           = var.enable_backup
+  enable_auto_recovery    = var.enable_auto_recovery
+  enable_monitoring       = var.enable_monitoring
+  enable_cloudtrail       = var.enable_cloudtrail
+  tags                    = var.tags
 } 
