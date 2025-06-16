@@ -11,7 +11,7 @@ import (
 
 // TestKMSKeyTags KMS 키 태그 테스트 (단순화)
 func TestKMSKeyTags(t *testing.T) {
-	t.Parallel()
+	// t.Parallel() 제거 - AWS API 제한 방지를 위해 순차 실행
 
 	t.Logf("🏷️ KMS 키 태그 테스트 시작...")
 
