@@ -60,12 +60,15 @@ func SetupKMSTest(t *testing.T, config *KMSTestConfig) *terraform.Options {
 			"enable_key_rotation":     true,  // 기본 KMS 기능만 사용
 			"tags":                    config.Tags,
 		},
-		// 재시도 설정 추가
+		// 재시도 설정 추가 (GitHub Actions 안정성 향상)
 		RetryableTerraformErrors: map[string]string{
-			".*": "Terraform operation failed, retrying...",
+			".*RequestLimitExceeded.*": "AWS API 요청 제한, 재시도 중...",
+			".*throttling.*":           "AWS API 스로틀링, 재시도 중...",
+			".*timeout.*":              "타임아웃 발생, 재시도 중...",
+			".*":                       "Terraform operation failed, retrying...",
 		},
-		MaxRetries:         3,
-		TimeBetweenRetries: 5 * time.Second,
+		MaxRetries:         5,                // 재시도 횟수 증가
+		TimeBetweenRetries: 10 * time.Second, // 재시도 간격 증가
 	})
 
 	return terraformOptions
