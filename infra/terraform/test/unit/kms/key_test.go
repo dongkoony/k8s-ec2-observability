@@ -12,7 +12,7 @@ import (
 
 // KMS 키 생성 테스트 (GitHub Actions 최적화)
 func TestKMSKeyCreation(t *testing.T) {
-	t.Parallel()
+	// t.Parallel() 제거 - AWS API 제한 방지를 위해 순차 실행
 
 	t.Logf("🔐 KMS 키 생성 테스트 시작...")
 
