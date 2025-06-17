@@ -1,21 +1,21 @@
 output "public_ip" {
-  description = "마스터 노드의 퍼블릭 IP 주소"
+  description = "Master node public IP address"
   value       = aws_instance.master.public_ip
 }
 
 output "private_ip" {
-  description = "마스터 노드의 프라이빗 IP 주소"
+  description = "Master node private IP address"
   value       = aws_instance.master.private_ip
 }
 
 output "instance_id" {
-  description = "마스터 노드의 인스턴스 ID"
+  description = "Master node instance ID"
   value       = aws_instance.master.id
 }
 
 output "security_group_id" {
-  description = "마스터 노드의 보안 그룹 ID"
-  value       = aws_security_group.master.id
+  description = "Security group ID used by master node"
+  value       = var.security_group_id
 }
 
 output "subnet_id" {

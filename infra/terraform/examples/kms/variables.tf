@@ -26,48 +26,25 @@ variable "test_name" {
   type        = string
 }
 
-variable "enable_multi_region" {
-  description = "다중 리전 복제 활성화 여부"
-  type        = bool
-  default     = false
-}
-
-variable "replica_region" {
-  description = "복제 리전"
-  type        = string
-  default     = "us-west-2"
-}
-
-variable "enable_backup" {
-  description = "AWS Backup 활성화 여부"
+variable "enable_key_rotation" {
+  description = "KMS 키 자동 교체 활성화 여부"
   type        = bool
   default     = true
 }
 
-variable "enable_auto_recovery" {
-  description = "자동 복구 기능 활성화 여부"
-  type        = bool
-  default     = false
-}
+variable "deletion_window_in_days" {
+  description = "KMS 키 삭제 대기 기간 (7-30일)"
+  type        = number
+  default     = 7
 
-variable "enable_monitoring" {
-  description = "CloudWatch 모니터링 및 경보 활성화 여부"
-  type        = bool
-  default     = false
-}
-
-variable "enable_cloudtrail" {
-  description = "CloudTrail 및 관련 로깅 활성화 여부"
-  type        = bool
-  default     = false
+  validation {
+    condition     = var.deletion_window_in_days >= 7 && var.deletion_window_in_days <= 30
+    error_message = "KMS 키 삭제 대기 기간은 7-30일 사이여야 합니다."
+  }
 }
 
 variable "tags" {
-  description = "리소스에 적용할 태그"
+  description = "리소스 태그"
   type        = map(string)
-  default = {
-    Environment = "test"
-    Project     = "k8s-ec2-observability"
-    ManagedBy   = "terraform"
-  }
+  default     = {}
 } 

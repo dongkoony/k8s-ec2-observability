@@ -1,0 +1,158 @@
+name: Manual Test Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: '실행할 테스트 유형'
+        required: true
+        default: 'no-kms'
+        type: choice
+        options:
+        - 'unit-only'
+        - 'no-kms'
+        - 'full-with-kms'
+        - 'all'
+      environment:
+        description: '테스트 환경'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - 'dev'
+        - 'stage'
+
+env:
+  AWS_DEFAULT_REGION: ap-northeast-2
+  TF_VERSION: 1.5.0
+  GO_VERSION: 1.21
+
+jobs:
+  # 단위 테스트
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    if: contains(fromJson('["unit-only", "no-kms", "full-with-kms", "all"]'), github.event.inputs.test_type)
+    strategy:
+      matrix:
+        test-dir: [kms, ec2]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+    - name: Run Unit Tests - ${{ matrix.test-dir }}
+      working-directory: infra/terraform/test/unit/${{ matrix.test-dir }}
+      run: |
+        go mod download
+        go test -v -timeout 30m
+
+  # 통합 테스트 (KMS 없이)
+  integration-test-no-kms:
+    name: Integration Test (No KMS)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: contains(fromJson('["no-kms", "all"]'), github.event.inputs.test_type)
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+    - name: Run Integration Test (No KMS)
+      working-directory: infra/terraform/test/integration/kms_ec2
+      run: |
+        go mod download
+        go test -v -timeout 45m -run TestEC2WithoutKMS
+      env:
+        TF_LOG: INFO
+
+  # 완전한 통합 테스트 (KMS 포함)
+  integration-test-full:
+    name: Integration Test (Full with KMS)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: contains(fromJson('["full-with-kms", "all"]'), github.event.inputs.test_type)
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+    - name: Run Full Integration Test (with KMS)
+      working-directory: infra/terraform/test/integration/kms_ec2
+      run: |
+        go mod download
+        go test -v -timeout 60m -run TestKubernetesClusterIntegration
+      env:
+        TF_LOG: INFO
+
+  # 테스트 결과 요약
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-test-no-kms, integration-test-full]
+    if: always()
+    
+    steps:
+    - name: Test Results Summary
+      run: |
+        echo "## 🧪 수동 테스트 결과 요약" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**테스트 유형**: ${{ github.event.inputs.test_type }}" >> $GITHUB_STEP_SUMMARY
+        echo "**환경**: ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| 테스트 유형 | 상태 |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 단위 테스트 | ${{ needs.unit-tests.result == 'success' && '✅ 통과' || needs.unit-tests.result == 'skipped' && '⏭️ 건너뜀' || '❌ 실패' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 통합 테스트 (KMS 없이) | ${{ needs.integration-test-no-kms.result == 'success' && '✅ 통과' || needs.integration-test-no-kms.result == 'skipped' && '⏭️ 건너뜀' || '❌ 실패' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 통합 테스트 (KMS 포함) | ${{ needs.integration-test-full.result == 'success' && '✅ 통과' || needs.integration-test-full.result == 'skipped' && '⏭️ 건너뜀' || '❌ 실패' }} |" >> $GITHUB_STEP_SUMMARY 

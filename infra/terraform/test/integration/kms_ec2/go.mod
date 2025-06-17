@@ -1,15 +1,12 @@
-module github.com/k8s-ec2-observability/test/unit/kms
+module github.com/k8s-ec2-observability/test/integration/kms_ec2
 
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go v1.44.122
 	github.com/gruntwork-io/terratest v0.46.11
 	github.com/k8s-ec2-observability/test/helpers v0.0.0
 	github.com/stretchr/testify v1.8.4
 )
-
-replace github.com/k8s-ec2-observability/test/helpers => ../../helpers
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
@@ -19,6 +16,7 @@ require (
 	cloud.google.com/go/storage v1.28.1 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
+	github.com/aws/aws-sdk-go v1.44.263 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -60,3 +58,5 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/k8s-ec2-observability/test/helpers => ../../helpers

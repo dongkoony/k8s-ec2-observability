@@ -95,6 +95,8 @@ k8s-observability-platform/
 │       └── traffic-split.yml          # SMI TrafficSplit 예시
 ├── .github/
 │   └── workflows/
+│       ├── terraform-test.yml         # 자동 Terratest 실행 (단위 + 통합 테스트)
+│       ├── manual-test.yml            # 수동 테스트 트리거 워크플로우
 │       ├── terraform-plan.yml         # PR 시 자동 `terraform plan`
 │       ├── terraform-apply.yml        # main merge 시 `terraform apply`
 │       └── deploy-observability.yml   # 매니페스트 자동 배포 워크플로우
@@ -109,6 +111,36 @@ k8s-observability-platform/
 * Terraform ≥ v1.3.0
 * EC2 인스턴스 최소 사양: t3.medium (2 vCPU, 4 GB RAM)
 * SSH 키 페어 및 보안 그룹 설정
+
+---
+
+## 🧪 테스트
+
+### 자동 테스트 (CI/CD)
+- **Push/PR 시**: 단위 테스트 + 통합 테스트 (KMS 없이) 자동 실행
+- **PR 라벨**: `run-integration-tests` 라벨 추가 시 통합 테스트 실행
+- **완전한 테스트**: `run-full-integration-tests` 라벨 추가 시 KMS 포함 테스트 실행
+
+### 수동 테스트
+GitHub Actions에서 "Manual Test Trigger" 워크플로우 실행:
+- `unit-only`: 단위 테스트만 실행
+- `no-kms`: 단위 + 통합 테스트 (KMS 없이) - **권장**
+- `full-with-kms`: 단위 + 통합 테스트 (KMS 포함)
+- `all`: 모든 테스트 실행
+
+### 로컬 테스트
+```bash
+# 단위 테스트
+cd infra/terraform/test/unit/kms && go test -v
+cd infra/terraform/test/unit/ec2 && go test -v
+
+# 통합 테스트 (KMS 없이 - 권장)
+cd infra/terraform/test/integration/kms_ec2
+go test -v -run TestEC2WithoutKMS
+
+# 통합 테스트 (KMS 포함)
+go test -v -run TestKubernetesClusterIntegration
+```
 
 ---
 

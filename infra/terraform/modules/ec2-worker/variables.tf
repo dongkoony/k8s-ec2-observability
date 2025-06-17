@@ -1,43 +1,59 @@
 variable "project_name" {
-  description = "프로젝트 이름"
+  description = "Project name"
   type        = string
 }
 
 variable "worker_count" {
-  description = "생성할 워커 노드 수"
+  description = "Number of worker nodes"
   type        = number
   default     = 2
 }
 
 variable "ami_id" {
-  description = "EC2 인스턴스 AMI ID"
+  description = "AMI ID for worker instances"
   type        = string
 }
 
 variable "instance_type" {
-  description = "EC2 인스턴스 타입"
+  description = "Instance type for worker nodes"
   type        = string
+  default     = "t3.medium"
 }
 
 variable "subnet_id" {
-  description = "EC2 인스턴스가 생성될 서브넷 ID"
+  description = "Subnet ID where worker instances will be created"
   type        = string
 }
 
 variable "vpc_id" {
-  description = "VPC ID"
+  description = "VPC ID where the security group will be created"
   type        = string
 }
 
 variable "ssh_key_name" {
-  description = "EC2 접속용 SSH 키 이름 (선택사항)"
+  description = "Name of the SSH key pair"
   type        = string
   default     = null
 }
 
-variable "master_private_ip" {
-  description = "마스터 노드의 프라이빗 IP"
+variable "private_key_path" {
+  description = "Path to the private key file"
   type        = string
+}
+
+variable "master_private_ip" {
+  description = "Private IP address of the master node"
+  type        = string
+}
+
+variable "master_public_ip" {
+  description = "Public IP address of the master node (for bastion)"
+  type        = string
+}
+
+variable "master_instance" {
+  description = "Master instance dependency"
+  type        = any
 }
 
 variable "master_security_group_id" {
@@ -45,20 +61,32 @@ variable "master_security_group_id" {
   type        = string
 }
 
+variable "scripts_bucket" {
+  description = "S3 bucket name containing setup scripts"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
-  description = "리소스에 적용할 태그"
+  description = "Common tags for all resources"
   type        = map(string)
   default     = {}
 }
 
 variable "root_volume_size" {
-  description = "루트 볼륨 크기(GB)"
+  description = "Size of the root volume in GB"
   type        = number
   default     = 30
 }
 
 variable "kms_key_id" {
-  description = "EBS 볼륨 암호화용 KMS 키 ID"
+  description = "KMS key ID for encryption"
   type        = string
-  default     = ""
+  default     = null
+}
+
+variable "aws_region" {
+  description = "AWS 리전"
+  type        = string
+  default     = "ap-northeast-2"
 } 

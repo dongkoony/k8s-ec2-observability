@@ -125,4 +125,28 @@ variable "kms_replica_region" {
   default     = "us-west-2"
 }
 
+variable "public_subnet_cidr" {
+  description = "Public subnet CIDR block"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "private_subnet_cidr" {
+  description = "Private subnet CIDR block"
+  type        = string
+  default     = "10.0.2.0/24"
+}
+
+variable "volume_size" {
+  description = "Root volume size in GB"
+  type        = number
+  default     = 30
+}
+
+variable "volume_type" {
+  description = "Root volume type"
+  type        = string
+  default     = "gp3"
+}
+
  
