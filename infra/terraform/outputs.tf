@@ -1,50 +1,36 @@
-output "master_public_ip" {
-  description = "마스터 노드의 퍼블릭 IP"
-  value       = module.master.public_ip
-}
-
-output "master_private_ip" {
-  description = "마스터 노드의 프라이빗 IP"
-  value       = module.master.private_ip
-}
-
-output "worker_public_ips" {
-  description = "워커 노드들의 퍼블릭 IP 목록"
-  value       = module.worker.public_ips
-}
-
+# VPC 출력
 output "vpc_id" {
-  description = "생성된 VPC ID"
+  description = "VPC ID"
   value       = module.vpc.vpc_id
 }
 
 output "public_subnet_id" {
-  description = "생성된 퍼블릭 서브넷 ID"
+  description = "Public subnet ID"
   value       = module.vpc.public_subnet_id
 }
 
 output "private_subnet_id" {
-  description = "생성된 프라이빗 서브넷 ID"
+  description = "Private subnet ID"
   value       = module.vpc.private_subnet_id
+}
+
+# EC2 출력
+output "master_public_ip" {
+  description = "Master node public IP"
+  value       = module.master.public_ip
+}
+
+output "master_private_ip" {
+  description = "Master node private IP"
+  value       = module.master.private_ip
+}
+
+output "worker_private_ips" {
+  description = "Worker nodes private IPs"
+  value       = module.worker.private_ips
 }
 
 output "security_group_id" {
   description = "생성된 보안 그룹 ID"
   value       = module.security.security_group_id
-}
-
-# KMS 관련 출력값들
-output "kms_key_id" {
-  description = "생성된 KMS 키 ID"
-  value       = module.kms.key_id
-}
-
-output "kms_key_arn" {
-  description = "생성된 KMS 키 ARN"
-  value       = module.kms.key_arn
-}
-
-output "kms_alias_name" {
-  description = "생성된 KMS 키 별칭"
-  value       = module.kms.alias_name
 } 

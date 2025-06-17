@@ -228,68 +228,39 @@ resource "aws_cloudtrail" "kms_trail" {
   ]
 }
 
-# KMS 키 생성
+# 메인 KMS 키 리소스 (테스트 최적화)
 resource "aws_kms_key" "k8s_key" {
-  description             = "${var.project_name}-key"
-  deletion_window_in_days = var.environment == "prod" ? 30 : (var.environment == "stage" ? 14 : 7)
-  enable_key_rotation     = var.enable_key_rotation
+  description         = "KMS key for ${var.project_name} ${var.environment} environment (${var.unique_id})"
+  key_usage           = "ENCRYPT_DECRYPT"
   
-  # 병합된 태그 적용
-  tags = local.tags
-
+  # 테스트 최적화: 간단한 정책만 사용
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "Enable IAM User Permissions"
+        Sid    = "EnableRootPermissions"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         }
         Action   = "kms:*"
         Resource = "*"
-      },
-      {
-        Sid    = "Allow Key Administrators"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/terraform-developer"
-        }
-        Action = [
-          "kms:Create*",
-          "kms:Describe*",
-          "kms:Enable*",
-          "kms:List*",
-          "kms:Put*",
-          "kms:Update*",
-          "kms:Revoke*",
-          "kms:Disable*",
-          "kms:Get*",
-          "kms:Delete*",
-          "kms:TagResource",
-          "kms:UntagResource",
-          "kms:ScheduleKeyDeletion",
-          "kms:CancelKeyDeletion"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow EC2 to use the key"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey",
-          "kms:Encrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*"
-        ]
-        Resource = "*"
       }
     ]
   })
+
+  # 키 로테이션 설정
+  enable_key_rotation = var.enable_key_rotation
+  
+  # 키 삭제 보호 설정 (테스트에서는 빠른 삭제를 위해 짧게 설정)
+  deletion_window_in_days = var.deletion_window_in_days
+
+  tags = local.tags
+
+  # 테스트 최적화: lifecycle 규칙 추가
+  lifecycle {
+    prevent_destroy = false  # 테스트에서는 삭제 허용
+  }
 }
 
 # KMS 키 별칭 생성

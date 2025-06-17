@@ -1,54 +1,70 @@
 variable "project_name" {
-  description = "프로젝트 이름"
+  description = "Project name"
   type        = string
 }
 
 variable "ami_id" {
-  description = "EC2 인스턴스 AMI ID"
+  description = "AMI ID for the master instance"
   type        = string
 }
 
 variable "instance_type" {
-  description = "EC2 인스턴스 타입"
+  description = "Instance type for the master node"
   type        = string
+  default     = "t3.medium"
 }
 
 variable "subnet_id" {
-  description = "EC2 인스턴스가 생성될 서브넷 ID"
+  description = "Subnet ID where the master instance will be created"
   type        = string
 }
 
 variable "vpc_id" {
-  description = "VPC ID"
+  description = "VPC ID where the security group will be created"
   type        = string
 }
 
 variable "ssh_key_name" {
-  description = "EC2 접속용 SSH 키 이름 (선택사항)"
+  description = "Name of the SSH key pair"
   type        = string
   default     = null
 }
 
-variable "tags" {
-  description = "리소스에 적용할 태그"
-  type        = map(string)
-  default     = {}
+variable "private_key_path" {
+  description = "Path to the private key file for SSH connections"
+  type        = string
 }
 
 variable "root_volume_size" {
-  description = "루트 볼륨 크기(GB)"
+  description = "Size of the root volume in GB"
   type        = number
   default     = 30
 }
 
 variable "kms_key_id" {
-  description = "EBS 볼륨 암호화용 KMS 키 ID"
+  description = "KMS key ID for encryption"
   type        = string
-  default     = ""
+  default     = null
+}
+
+variable "scripts_bucket" {
+  description = "S3 bucket name containing setup scripts"
+  type        = string
+}
+
+variable "tags" {
+  description = "Common tags for all resources"
+  type        = map(string)
+  default     = {}
 }
 
 variable "aws_region" {
   description = "AWS 리전"
   type        = string
   default     = "ap-northeast-2"
+}
+
+variable "security_group_id" {
+  description = "Security group ID to attach to the master instance"
+  type        = string
 } 
