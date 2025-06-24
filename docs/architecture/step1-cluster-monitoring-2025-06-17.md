@@ -58,7 +58,7 @@ graph TB
 
 ---
 
-## 🛠️ **Action (행동)**
+## 🛠️ **Action (액션)**
 
 ### **Phase 1: 초기 접근 (metrics-server)**
 
