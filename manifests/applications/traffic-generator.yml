@@ -1,0 +1,73 @@
+# Traffic Generator Job
+# Step 3에서 검증된 성공적인 패턴 기반
+# Self-managed 환경에서 kubectl exec 제약을 우회하는 솔루션
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traffic-generator
+  namespace: bookinfo
+  labels:
+    app: traffic-generator
+spec:
+  template:
+    metadata:
+      labels:
+        app: traffic-generator
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting traffic generation to productpage service..."
+          for i in $(seq 1 50); do
+            echo "Request $i:"
+            curl -s -w "Status: %{http_code}, Time: %{time_total}s\n" \
+                 http://productpage:9080/productpage > /dev/null
+            if [ $? -eq 0 ]; then
+              echo "✅ Request $i successful"
+            else  
+              echo "❌ Request $i failed"
+            fi
+            sleep 2
+          done
+          echo "Traffic generation completed: 50 requests sent"
+      restartPolicy: Never
+  backoffLimit: 3
+
+---
+# CronJob version for continuous traffic
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: traffic-generator-cron
+  namespace: bookinfo
+  labels:
+    app: traffic-generator-cron
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: traffic-generator-cron
+        spec:
+          containers:
+          - name: curl
+            image: curlimages/curl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Scheduled traffic generation started..."
+              for i in $(seq 1 10); do
+                curl -s http://productpage:9080/productpage > /dev/null
+                echo "Request $i completed"
+                sleep 1
+              done
+          restartPolicy: OnFailure 
