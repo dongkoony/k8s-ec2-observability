@@ -1,0 +1,38 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+grafana:
+  adminPassword: prom-operator
+  persistence:
+    enabled: true
+    size: 10Gi
+  service:
+    type: NodePort
+    nodePort: 30300
+
+alertmanager:
+  alertmanagerSpec:
+    retention: 120h
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true 
