@@ -286,7 +286,7 @@ bash scripts/deploy-observability-stack.sh
 
 - **Issues**: [GitHub Issues](https://github.com/dongkoony/k8s-ec2-observability/issues)
 - **Documentation**: [docs/architecture](docs/architecture/)
-- **Contact**: 프로젝트 관련 문의사항
+- **Contact**: 프로젝트 관련 문의사항 dhyeon.shin@icloud.com
 
 ---
 
