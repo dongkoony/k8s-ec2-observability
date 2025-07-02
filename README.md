@@ -109,7 +109,7 @@ bash scripts/deploy-observability-stack.sh
 배포 완료 후 다음 URL로 접속 가능합니다:
 
 - **📊 Grafana**: `http://<MASTER_IP>:30300` (admin/prom-operator)
-- **🛍️ Bookinfo**: `http://<MASTER_IP>:30080`
+- **🛍️ Bookinfo**: `http://<MASTER_IP>:30080/productpage`
 - **🔍 Linkerd Viz**: `linkerd viz dashboard` (port-forward)
 
 ---
@@ -152,14 +152,15 @@ k8s-ec2-observability/
 │   ├── linkerd/                         # Linkerd 서비스 메시
 │   │   ├── install-crds.yml            # Custom Resource 정의
 │   │   ├── install-control-plane.yml   # Linkerd Control Plane
-│   │   └── install-viz.yml             # 시각화 확장 (Prometheus/Grafana)
+│   │   └── install-viz.yml             # 시각화 확장 (Auto-generated)
 │   ├── observability/                   # 관찰성 스택
-│   │   └── prometheus-stack-values.yml # Prometheus + Grafana Helm Values
+│   │   └── prometheus-stack-values.yml # Prometheus + Grafana Helm Values (PVC 비활성화)
 │   └── applications/                    # 데모 애플리케이션
-│       ├── bookinfo-with-linkerd.yml   # Istio Bookinfo 샘플 앱
-│       └── traffic-generator.yml       # 자동 트래픽 생성기
+│       ├── bookinfo-nodeport.yml       # Bookinfo NodePort 서비스 + 네임스페이스
+│       ├── bookinfo-with-linkerd.yml   # Linkerd Injection 설정 (Optional)
+│       └── traffic-generator.yml       # 지속적 트래픽 생성기 (Deployment)
 ├── 🚀 scripts/                          # 배포 자동화 스크립트
-│   ├── deploy-observability-stack.sh   # 전체 스택 원클릭 배포
+│   ├── deploy-observability-stack.sh   # 전체 스택 원클릭 배포 (Self-managed 최적화 포함)
 │   ├── combined_settings.sh            # 통합 클러스터 설정
 │   ├── system_settings.sh              # 시스템 초기 설정
 │   ├── worker_setup.sh                 # 워커 노드 전용 설정
