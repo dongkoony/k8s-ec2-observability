@@ -3,19 +3,12 @@ prometheus:
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     retention: 15d
-    storageSpec:
-      volumeClaimTemplate:
-        spec:
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 50Gi
+    storageSpec: {}
 
 grafana:
   adminPassword: prom-operator
   persistence:
-    enabled: true
-    size: 10Gi
+    enabled: false
   service:
     type: NodePort
     nodePort: 30300
@@ -23,13 +16,7 @@ grafana:
 alertmanager:
   alertmanagerSpec:
     retention: 120h
-    storage:
-      volumeClaimTemplate:
-        spec:
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 2Gi
+    storage: {}
 
 nodeExporter:
   enabled: true

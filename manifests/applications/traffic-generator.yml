@@ -1,73 +1,78 @@
-# Traffic Generator Job
-# Step 3에서 검증된 성공적인 패턴 기반
-# Self-managed 환경에서 kubectl exec 제약을 우회하는 솔루션
+# Traffic Generator Deployment
+# Step 7에서 검증된 지속적 트래픽 생성 패턴
+# 실제 Prometheus 메트릭 생성을 위한 지속적 워크로드
 
----
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: traffic-generator
   namespace: bookinfo
   labels:
     app: traffic-generator
 spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-generator
   template:
     metadata:
       labels:
         app: traffic-generator
     spec:
       containers:
-      - name: curl
+      - name: traffic-generator
         image: curlimages/curl:latest
-        command:
-        - /bin/sh
+        command: ["/bin/sh"]
+        args:
         - -c
         - |
-          echo "Starting traffic generation to productpage service..."
-          for i in $(seq 1 50); do
-            echo "Request $i:"
-            curl -s -w "Status: %{http_code}, Time: %{time_total}s\n" \
-                 http://productpage:9080/productpage > /dev/null
-            if [ $? -eq 0 ]; then
-              echo "✅ Request $i successful"
-            else  
-              echo "❌ Request $i failed"
+          echo "🚀 Starting continuous traffic generation..."
+          echo "Target: http://productpage:9080/productpage"
+          
+          counter=1
+          while true; do
+            # 기본 요청
+            response=$(curl -s -w "%{http_code}" -o /dev/null http://productpage:9080/productpage)
+            timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+            
+            if [ "$response" = "200" ]; then
+              echo "[$timestamp] Request #$counter: ✅ SUCCESS (HTTP $response)"
+            else
+              echo "[$timestamp] Request #$counter: ❌ FAILED (HTTP $response)"
             fi
-            sleep 2
+            
+            # 다양한 엔드포인트 요청으로 메트릭 다양화
+            if [ $((counter % 10)) -eq 0 ]; then
+              echo "[$timestamp] Sending requests to different services..."
+              curl -s http://details:9080/details/1 > /dev/null &
+              curl -s http://ratings:9080/ratings/1 > /dev/null &
+              curl -s http://reviews:9080/reviews/1 > /dev/null &
+              wait
+            fi
+            
+            counter=$((counter + 1))
+            sleep 3
           done
-          echo "Traffic generation completed: 50 requests sent"
-      restartPolicy: Never
-  backoffLimit: 3
-
----
-# CronJob version for continuous traffic
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: traffic-generator-cron
-  namespace: bookinfo
-  labels:
-    app: traffic-generator-cron
-spec:
-  schedule: "*/5 * * * *"  # Every 5 minutes
-  jobTemplate:
-    spec:
-      template:
-        metadata:
-          labels:
-            app: traffic-generator-cron
-        spec:
-          containers:
-          - name: curl
-            image: curlimages/curl:latest
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+        livenessProbe:
+          exec:
             command:
             - /bin/sh
             - -c
-            - |
-              echo "Scheduled traffic generation started..."
-              for i in $(seq 1 10); do
-                curl -s http://productpage:9080/productpage > /dev/null
-                echo "Request $i completed"
-                sleep 1
-              done
-          restartPolicy: OnFailure 
+            - "pgrep -f curl"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "pgrep -f curl"
+          initialDelaySeconds: 5
+          periodSeconds: 10 
