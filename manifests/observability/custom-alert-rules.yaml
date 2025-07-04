@@ -1,0 +1,217 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: k8s-ec2-observability-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+    release: prometheus-stack
+spec:
+  groups:
+  - name: critical-system-alerts
+    interval: 30s
+    rules:
+    # 🚨 마스터노드 CPU 과부하 (t3.medium 특화)
+    - alert: MasterNodeHighCPU
+      expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle",instance=~".*ip-10-0-1-34.*"}[5m])) * 100) > 95
+      for: 2m
+      labels:
+        severity: critical
+        component: node
+        node_type: master
+      annotations:
+        summary: "🚨 마스터노드 CPU 사용률 심각 (95% 초과)"
+        description: "마스터노드 {{ $labels.instance }}의 CPU 사용률이 {{ $value }}%입니다. t3.medium 환경에서 매우 위험한 수준입니다."
+        runbook_url: "https://github.com/dongkoony/k8s-ec2-observability/blob/main/docs/runbooks/high-cpu.md"
+        
+    # 🚨 마스터노드 메모리 부족 (4GB 기준)
+    - alert: MasterNodeHighMemory
+      expr: (1 - (node_memory_MemAvailable_bytes{instance=~".*ip-10-0-1-34.*"} / node_memory_MemTotal_bytes{instance=~".*ip-10-0-1-34.*"})) * 100 > 85
+      for: 3m
+      labels:
+        severity: critical
+        component: node
+        node_type: master
+      annotations:
+        summary: "🚨 마스터노드 메모리 부족 (85% 초과)"
+        description: "마스터노드의 메모리 사용률이 {{ $value }}%입니다. 4GB 환경에서 OOM 위험이 높습니다."
+        
+    # 🚨 다중 Pod Pending 상태 (리소스 부족 징조)
+    - alert: MultiplePodsPending
+      expr: count(kube_pod_status_phase{phase="Pending"}) > 2
+      for: 5m
+      labels:
+        severity: critical
+        component: pod-scheduler
+      annotations:
+        summary: "🚨 다수의 Pod가 Pending 상태 ({{ $value }}개)"
+        description: "{{ $value }}개의 Pod가 5분 이상 Pending 상태입니다. 리소스 부족이나 스케줄링 문제가 의심됩니다."
+        
+    # 🚨 Prometheus 서버 다운
+    - alert: PrometheusDown
+      expr: up{job="prometheus-kube-prometheus-prometheus"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: monitoring
+      annotations:
+        summary: "🚨 Prometheus 서버 다운"
+        description: "Prometheus 서버가 1분 이상 응답하지 않습니다. 모니터링 시스템이 중단되었습니다."
+
+  - name: warning-system-alerts
+    interval: 60s
+    rules:
+    # ⚠️ 높은 CPU 사용률 (80% 경고)
+    - alert: HighCPUUsage
+      expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+      for: 5m
+      labels:
+        severity: warning
+        component: node
+      annotations:
+        summary: "⚠️ 높은 CPU 사용률 감지 ({{ $value }}%)"
+        description: "노드 {{ $labels.instance }}의 CPU 사용률이 {{ $value }}%입니다. 리소스 최적화가 필요합니다."
+        
+    # ⚠️ Pod 재시작 루프
+    - alert: PodRestartLoop
+      expr: increase(kube_pod_container_status_restarts_total[30m]) > 3
+      for: 10m
+      labels:
+        severity: warning
+        component: pod
+      annotations:
+        summary: "⚠️ Pod 재시작 루프 감지"
+        description: "Pod {{ $labels.pod }} ({{ $labels.namespace }})가 30분 내에 {{ $value }}회 재시작되었습니다."
+        
+    # ⚠️ Linkerd 컨트롤 플레인 이슈
+    - alert: LinkerdControlPlaneIssue
+      expr: up{job="linkerd-controller"} == 0
+      for: 3m
+      labels:
+        severity: warning
+        component: service-mesh
+      annotations:
+        summary: "⚠️ Linkerd 컨트롤 플레인 문제"
+        description: "Linkerd 컨트롤 플레인이 3분 이상 응답하지 않습니다."
+        
+    # ⚠️ 디스크 공간 부족
+    - alert: LowDiskSpace
+      expr: (1 - (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"})) * 100 > 80
+      for: 10m
+      labels:
+        severity: warning
+        component: storage
+      annotations:
+        summary: "⚠️ 디스크 공간 부족 ({{ $value }}%)"
+        description: "노드 {{ $labels.instance }}의 루트 파티션 사용률이 {{ $value }}%입니다."
+
+  - name: bookinfo-application-alerts
+    interval: 60s
+    rules:
+    # 📱 Bookinfo 애플리케이션 상태
+    - alert: BookinfoServiceDown
+      expr: up{job="bookinfo-productpage"} == 0
+      for: 3m
+      labels:
+        severity: warning
+        component: application
+        service: bookinfo
+      annotations:
+        summary: "📱 Bookinfo ProductPage 서비스 다운"
+        description: "Bookinfo ProductPage 서비스가 3분 이상 응답하지 않습니다."
+        
+    # 📱 Bookinfo 응답 시간 지연
+    - alert: BookinfoHighLatency
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="bookinfo-productpage"}[5m])) > 2
+      for: 5m
+      labels:
+        severity: warning
+        component: application
+        service: bookinfo
+      annotations:
+        summary: "📱 Bookinfo 응답 시간 지연 ({{ $value }}초)"
+        description: "Bookinfo ProductPage의 95% 응답 시간이 {{ $value }}초입니다. 성능 최적화가 필요합니다."
+
+  - name: self-managed-k8s-alerts
+    interval: 90s
+    rules:
+    # 🏗️ 마스터노드 과부하 (자체 관리형 특화)
+    - alert: MasterNodeOverloaded
+      expr: count(kube_pod_info{node=~".*ip-10-0-1-34.*"}) > 45
+      for: 10m
+      labels:
+        severity: warning
+        component: self-managed
+      annotations:
+        summary: "🏗️ 마스터노드 과부하 ({{ $value }}개 Pod)"
+        description: "마스터노드에 {{ $value }}개의 Pod가 실행 중입니다. 자체 관리형 환경에서 너무 많은 부하입니다."
+        
+    # 🏗️ 워커노드 유휴 상태
+    - alert: WorkerNodeUnderutilized
+      expr: count(kube_pod_info{node!~".*ip-10-0-1-34.*"}) < 5
+      for: 30m
+      labels:
+        severity: info
+        component: self-managed
+      annotations:
+        summary: "🏗️ 워커노드 저사용률 ({{ $value }}개 Pod만 실행)"
+        description: "워커노드들에 {{ $value }}개의 Pod만 실행 중입니다. 리소스 재분배를 고려하세요."
+        
+    # 🏗️ PVC 생성 실패 (자체 관리형 환경)
+    - alert: PVCCreationFailed
+      expr: kube_persistentvolumeclaim_status_phase{phase="Pending"} > 0
+      for: 15m
+      labels:
+        severity: warning
+        component: storage
+      annotations:
+        summary: "🏗️ PVC 생성 실패"
+        description: "PVC {{ $labels.persistentvolumeclaim }} ({{ $labels.namespace }})가 15분 이상 Pending 상태입니다."
+
+  - name: operational-kpi-alerts
+    interval: 120s
+    rules:
+    # 📊 자동복구 시스템 트리거
+    - alert: AutoRecoveryTrigger
+      expr: (count(kube_pod_container_status_restarts_total) - count(kube_pod_container_status_restarts_total offset 10m)) > 5
+      for: 2m
+      labels:
+        severity: info
+        component: auto-recovery
+      annotations:
+        summary: "📊 자동복구 시스템 트리거 (10분간 {{ $value }}회 재시작)"
+        description: "최근 10분간 {{ $value }}회의 Pod 재시작이 발생했습니다. 자동복구 시스템이 작동해야 합니다."
+        
+    # 📊 모니터링 시스템 건강성
+    - alert: MonitoringHealthCheck
+      expr: up{job=~".*prometheus.*|.*grafana.*|.*alertmanager.*"} == 0
+      for: 5m
+      labels:
+        severity: warning
+        component: monitoring
+      annotations:
+        summary: "📊 모니터링 컴포넌트 다운"
+        description: "모니터링 시스템의 {{ $labels.job }} 컴포넌트가 5분 이상 다운되었습니다."
+        
+    # 📊 일일 운영 성공률 KPI
+    - alert: DailyOperationalKPI
+      expr: (count(kube_pod_status_phase{phase="Running"}) / count(kube_pod_info)) * 100 < 85
+      for: 30m
+      labels:
+        severity: info
+        component: kpi
+      annotations:
+        summary: "📊 일일 운영 성공률 낮음 ({{ $value }}%)"
+        description: "현재 Pod 실행 성공률이 {{ $value }}%입니다. 목표 성공률 85% 미달입니다."
+        
+    # 📊 Linkerd mTLS 암호화율
+    - alert: LinkerdmTLSCoverage
+      expr: (count(kube_pod_info{pod=~".*-.*-.*"}) - count(kube_pod_info{pod=~".*linkerd-proxy.*"})) / count(kube_pod_info{pod=~".*-.*-.*"}) * 100 > 20
+      for: 20m
+      labels:
+        severity: info
+        component: security
+      annotations:
+        summary: "📊 Linkerd mTLS 적용률 낮음"
+        description: "약 {{ $value }}%의 Pod가 Linkerd 프록시 없이 실행 중입니다. 보안 강화가 필요합니다." 
